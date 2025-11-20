@@ -3,7 +3,6 @@ import Hero from './components/Hero'
 import Features from './components/Features'
 import QuizCategories from './components/QuizCategories'
 import Stats from './components/Stats'
-import CTA from './components/CTA'
 import Footer from './components/Footer'
 
 function App() {
@@ -22,7 +21,6 @@ function App() {
         <Stats />
         <Features />
         <QuizCategories />
-        <CTA />
         <Footer />
       </div>
     </div>
