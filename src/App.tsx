@@ -545,7 +545,7 @@ function App() {
                   <button
                     key={index}
                     onClick={() => onAnswer(index)}
-                    disabled={!!userAnswers || loading}
+                    disabled={userAnswers !== null || loading}
                     className={`${ANSWER_COLORS[index]} text-white font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer p-6 rounded-2xl relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-h-[120px]`}
                   >
                     <div className="relative z-10 flex items-center justify-center">
