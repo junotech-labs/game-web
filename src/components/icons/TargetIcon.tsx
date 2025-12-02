@@ -1,6 +1,4 @@
-interface IconProps {
-  className?: string;
-}
+import { IconProps } from '../../types/common';
 
 export function TargetIcon({ className = "w-12 h-12" }: IconProps) {
   return (

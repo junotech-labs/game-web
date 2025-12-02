@@ -1,6 +1,4 @@
-interface IconProps {
-  className?: string;
-}
+import { IconProps } from '../../types/common';
 
 export function DiceIcon({ className = "w-6 h-6" }: IconProps) {
   return (
