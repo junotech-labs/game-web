@@ -31,7 +31,7 @@ function App() {
   const [currentQuiz, setCurrentQuiz] = useState<QuizResponse | null>(null);
 
   const [answerResult, setAnswerResult] = useState<AnswerResponse | null>(null);
-  const [userAnswers, setUserAnswers] = useState<number | null>(null);
+  const [userAnswer, setUserAnswer] = useState<number | null>(null);
 
   const [quizHistory, setQuizHistory] = useState<AnswerResponse[]>([]);
 
@@ -58,7 +58,7 @@ function App() {
       currentQuizIndex.current = 0;
       setCurrentQuiz(quizzes[currentQuizIndex.current]);
       setGameMode('playing');
-      setUserAnswers(null);
+      setUserAnswer(null);
       setAnswerResult(null);
       setTimerKey(prev => prev + 1);
 
@@ -76,8 +76,8 @@ function App() {
   };
 
   const onAnswer = (answer: number) => {
-    if (userAnswers !== null) return;
-    setUserAnswers(answer);
+    if (userAnswer !== null) return;
+    setUserAnswer(answer);
   };
 
   // useEffect에서 사용자 응답 통합 처리
@@ -136,13 +136,13 @@ function App() {
         setLoading(false);
       }
     };
-    if (userAnswers === null) return;
-    handleAnswerClick(userAnswers);
+    if (userAnswer === null) return;
+    handleAnswerClick(userAnswer);
 
     return () => {
       cancelled = true;
     };
-  }, [userAnswers]);
+  }, [userAnswer]);
 
   const handleNextQuestion = () => {
     console.log('[App] Moving to next question...');
@@ -157,7 +157,7 @@ function App() {
 
     // 부드러운 전환을 위해 현재 상태 먼저 초기화
     setAnswerResult(null);
-    setUserAnswers(null); // 사용자 응답 초기화 이후 시간이 흐르도록 설정
+    setUserAnswer(null); // 사용자 응답 초기화 이후 시간이 흐르도록 설정
 
     // 큐에서 다음 퀴즈 가져오기
     const nextIndex = currentQuizIndex.current + 1;
@@ -521,8 +521,8 @@ function App() {
           <div className="mb-4">
             <Timer
               duration={TIMER_DURATION}
-              onTimeout={() => setUserAnswers(0)}
-              isRunning={userAnswers === null}
+              onTimeout={() => setUserAnswer(0)}
+              isRunning={userAnswer === null}
               onReset={timerKey}
             />
           </div>
@@ -545,7 +545,7 @@ function App() {
                   <button
                     key={index}
                     onClick={() => onAnswer(index)}
-                    disabled={userAnswers !== null || loading}
+                    disabled={userAnswer !== null || loading}
                     className={`${ANSWER_COLORS[index]} text-white font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer p-6 rounded-2xl relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-h-[120px]`}
                   >
                     <div className="relative z-10 flex items-center justify-center">
