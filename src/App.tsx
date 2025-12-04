@@ -7,7 +7,7 @@ function App() {
     gameMode,
     currentQuiz,
     answerResult,
-    isAnswered,
+    userAnswer,
     quizHistory,
     loading,
     error,
@@ -17,8 +17,7 @@ function App() {
     totalCount,
     accuracy,
     startGame,
-    handleAnswerClick,
-    handleTimeout,
+    onAnswer,
     handleNextQuestion,
     showResults,
     backToMenu,
@@ -62,14 +61,13 @@ function App() {
     <PlayScreen
       currentQuiz={currentQuiz}
       answerResult={answerResult}
-      isAnswered={isAnswered}
+      userAnswer={userAnswer}
       quizHistory={quizHistory}
       loading={loading}
       error={error}
       showConfetti={showConfetti}
       timerKey={timerKey}
-      onAnswerClick={handleAnswerClick}
-      onTimeout={handleTimeout}
+      onAnswer={onAnswer}
       onNextQuestion={handleNextQuestion}
       onShowResults={showResults}
     />

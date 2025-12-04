@@ -7,14 +7,13 @@ import { QUIZ_COUNT, TIMER_DURATION, ANSWER_COLORS } from '../../constants/game'
 interface PlayScreenProps {
   currentQuiz: QuizResponse;
   answerResult: AnswerResponse | null;
-  isAnswered: boolean;
+  userAnswer: number | null;
   quizHistory: AnswerResponse[];
   loading: boolean;
   error: string | null;
   showConfetti: boolean;
   timerKey: number;
-  onAnswerClick: (index: number) => void;
-  onTimeout: () => void;
+  onAnswer: (index: number) => void;
   onNextQuestion: () => void;
   onShowResults: () => void;
 }
@@ -22,14 +21,13 @@ interface PlayScreenProps {
 export function PlayScreen({
   currentQuiz,
   answerResult,
-  isAnswered,
+  userAnswer,
   quizHistory,
   loading,
   error,
   showConfetti,
   timerKey,
-  onAnswerClick,
-  onTimeout,
+  onAnswer,
   onNextQuestion,
   onShowResults,
 }: PlayScreenProps) {
@@ -58,8 +56,8 @@ export function PlayScreen({
           <div className="mb-4">
             <Timer
               duration={TIMER_DURATION}
-              onTimeout={onTimeout}
-              isRunning={!isAnswered}
+              onTimeout={() => onAnswer(0)}
+              isRunning={userAnswer === null}
               onReset={timerKey}
             />
           </div>
@@ -67,14 +65,14 @@ export function PlayScreen({
 
         {/* 문제 또는 피드백 영역 */}
         <div className="mb-8 min-h-[200px]">
-          {!isAnswered ? (
+          {!answerResult ? (
             <QuestionView
               currentQuiz={currentQuiz}
-              isAnswered={isAnswered}
+              userAnswer={userAnswer}
               loading={loading}
-              onAnswerClick={onAnswerClick}
+              onAnswer={onAnswer}
             />
-          ) : answerResult ? (
+          ) : (
             <FeedbackView
               currentQuiz={currentQuiz}
               answerResult={answerResult}
@@ -83,7 +81,7 @@ export function PlayScreen({
               onNextQuestion={onNextQuestion}
               onShowResults={onShowResults}
             />
-          ) : null}
+          )}
         </div>
 
         {/* Error message */}
@@ -100,12 +98,12 @@ export function PlayScreen({
 // 문제 표시 컴포넌트
 interface QuestionViewProps {
   currentQuiz: QuizResponse;
-  isAnswered: boolean;
+  userAnswer: number | null;
   loading: boolean;
-  onAnswerClick: (index: number) => void;
+  onAnswer: (index: number) => void;
 }
 
-function QuestionView({ currentQuiz, isAnswered, loading, onAnswerClick }: QuestionViewProps) {
+function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionViewProps) {
   return (
     <div>
       <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-8 border-2 border-emerald-200 shadow-inner min-h-[140px] flex items-center justify-center">
@@ -119,8 +117,8 @@ function QuestionView({ currentQuiz, isAnswered, loading, onAnswerClick }: Quest
         {currentQuiz.options.map((option, index) => (
           <button
             key={index}
-            onClick={() => onAnswerClick(index)}
-            disabled={isAnswered || loading}
+            onClick={() => onAnswer(index)}
+            disabled={userAnswer !== null || loading}
             className={`${ANSWER_COLORS[index]} text-white font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer p-6 rounded-2xl relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-h-[120px]`}
           >
             <div className="relative z-10 flex items-center justify-center">
