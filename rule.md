@@ -296,11 +296,101 @@ try {
 ### 7.3 로깅 규칙
 
 ```tsx
-// 모듈별 prefix 사용
+// 모듈별 prefix 사용 (개발용)
 console.log('[API] GET', url);
 console.log('[App] Loading quizzes...');
 console.error('[API] Error:', errorMessage);
 ```
+
+### 7.4 Analytics 이벤트 트래킹
+
+프로덕션 환경에서의 이벤트 추적을 위해 Granite 프레임워크의 Analytics API를 사용합니다.
+
+#### 7.4.1 Analytics API 종류
+
+```tsx
+import { Analytics } from '@apps-in-toss/web-framework';
+
+// 사용자 클릭 이벤트
+Analytics.click({
+  action: 'button_name',
+  screen: 'screen_name',
+  // 추가 컨텍스트 데이터
+});
+
+// 화면 노출/상태 변화 이벤트
+Analytics.impression({
+  action: 'state_change',
+  // 추가 컨텍스트 데이터
+});
+
+// 화면 전환 이벤트
+Analytics.screen({
+  screen_name: 'menu',
+  // 추가 컨텍스트 데이터
+});
+```
+
+#### 7.4.2 이벤트 네이밍 규칙
+
+| 이벤트 타입 | 사용 시점 | 네이밍 | 예시 |
+|------------|----------|--------|------|
+| `click` | 버튼/UI 클릭 | `동작_대상` (snake_case) | `game_start`, `answer_select` |
+| `impression` | 상태 변화, 결과 표시 | `상태_변화` (snake_case) | `answer_correct`, `game_complete` |
+| `screen` | 화면 전환 | 화면 이름 | `menu`, `play`, `result` |
+
+#### 7.4.3 이벤트 데이터 구조
+
+```tsx
+// Good: 명확한 컨텍스트와 함께 이벤트 전송
+Analytics.click({
+  action: 'answer_select',      // 필수: 액션 이름
+  screen: 'play',                // 권장: 현재 화면
+  quiz_id: currentQuiz.id,       // 선택: 관련 데이터
+  answer_index: index,
+  question_number: 1,
+});
+
+// Good: 중요한 상태 변화 추적
+Analytics.impression({
+  action: 'game_complete',
+  final_correct: 8,
+  final_total: 10,
+  accuracy: 80,
+});
+```
+
+#### 7.4.4 이벤트 추적 예시
+
+```tsx
+// MenuScreen.tsx
+const handleStartGame = () => {
+  console.log('[MenuScreen] Game start button clicked'); // 개발용
+  Analytics.click({ action: 'game_start', screen: 'menu' }); // 프로덕션 추적
+  onStartGame();
+};
+
+// useQuizGame.ts
+if (result.is_correct) {
+  console.log('[useQuizGame] Correct answer!', { /* ... */ }); // 개발용
+  Analytics.impression({  // 프로덕션 추적
+    action: 'answer_correct',
+    quiz_id: currentQuiz.id,
+    question_number: newHistory.length,
+    total_correct: newHistory.filter((h) => h.is_correct).length,
+  });
+}
+```
+
+#### 7.4.5 이벤트 추적 체크리스트
+
+- [ ] 모든 사용자 클릭 액션에 `Analytics.click()` 추가
+- [ ] 중요한 상태 변화에 `Analytics.impression()` 추가
+- [ ] 이벤트 이름은 snake_case 사용
+- [ ] 필수 필드: `action` (또는 `screen_name`)
+- [ ] 권장 필드: `screen` (현재 화면 이름)
+- [ ] 관련 컨텍스트 데이터 포함 (quiz_id, question_number 등)
+- [ ] console.log는 개발용으로 유지 (Analytics와 병행 사용)
 
 ---
 
@@ -624,3 +714,60 @@ refactor: App 컴포넌트를 screens로 분리
 
 - 클라이언트 환경 변수는 `VITE_` 접두사 필수
 - 민감한 정보는 환경 변수로 관리
+
+---
+
+## 17. 현재 구현된 이벤트 목록
+
+### 17.1 Click 이벤트 (사용자 인터랙션)
+
+| 화면 | 액션 이름 | 트리거 | 포함 데이터 |
+|------|----------|--------|-------------|
+| MenuScreen | `game_start` | 게임 시작 버튼 클릭 | screen: 'menu' |
+| PlayScreen | `answer_select` | 답변 선택 | screen: 'play', quiz_id, answer_index, question_number |
+| PlayScreen | `next_question` | 다음 문제 버튼 클릭 | screen: 'play', current_question |
+| PlayScreen | `show_results` | 결과 보기 버튼 클릭 | screen: 'play', total_questions, correct_answers |
+| PlayScreen | `timer_timeout` | 타이머 타임아웃 (자동 선택) | screen: 'play', quiz_id, question_number |
+| ResultScreen | `back_to_menu` | 메인 메뉴로 버튼 클릭 | screen: 'result', total_count, correct_count, accuracy |
+| ResultScreen | `retry` | 다시 도전하기 버튼 클릭 | screen: 'result', previous_total, previous_correct, previous_accuracy |
+
+### 17.2 Impression 이벤트 (상태 변화)
+
+| 위치 | 액션 이름 | 트리거 | 포함 데이터 |
+|------|----------|--------|-------------|
+| useQuizGame | `game_started` | 게임 시작 (퀴즈 로드 완료) | quiz_count: 10 |
+| useQuizGame | `answer_correct` | 정답 제출 | quiz_id, question_number, total_correct |
+| useQuizGame | `answer_wrong` | 오답 제출 | quiz_id, question_number, total_correct |
+| useQuizGame | `game_complete` | 게임 완료 (10문제 완료) | final_correct, final_total, accuracy |
+
+### 17.3 이벤트 플로우
+
+```
+[사용자 여정]
+1. MenuScreen 진입
+   → (사용자) game_start 클릭
+
+2. 게임 시작
+   → (시스템) game_started impression
+
+3. 문제 풀이 (10회 반복)
+   → (사용자) answer_select 클릭 OR timer_timeout
+   → (시스템) answer_correct OR answer_wrong impression
+   → (사용자) next_question 클릭 (자동 전환 가능)
+
+4. 마지막 문제 완료
+   → (시스템) game_complete impression
+   → (사용자) show_results 클릭
+
+5. ResultScreen
+   → (사용자) back_to_menu OR retry 클릭
+```
+
+### 17.4 이벤트 확인 방법
+
+```bash
+# 개발 환경에서 확인
+1. 브라우저 개발자 도구 (F12) 열기
+2. Console 탭에서 [MenuScreen], [PlayScreen] 등의 로그 확인
+3. Network 탭에서 Analytics API 호출 확인 (프로덕션)
+```
