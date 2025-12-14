@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { quizApi, QuizApiError } from '../api/quizApi';
+import { quizApi, QuizApiError, setOfflineMode } from '../api/quizApi';
 import { QuizResponse, AnswerResponse } from '../types/quiz';
 import { GameMode } from '../types/game';
 import {
@@ -21,6 +21,7 @@ interface UseQuizGameReturn {
   error: string | null;
   showConfetti: boolean;
   timerKey: number;
+  isOfflineMode: boolean;
 
   // 계산된 값
   correctCount: number;
@@ -52,6 +53,7 @@ export function useQuizGame(): UseQuizGameReturn {
   const [showConfetti, setShowConfetti] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
   const [autoTransitionTimer, setAutoTransitionTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   // 계산된 값
   const correctCount = quizHistory.filter((h) => h.is_correct).length;
@@ -88,33 +90,25 @@ export function useQuizGame(): UseQuizGameReturn {
     setError(null);
     setQuizHistory([]);
 
-    try {
-      console.log(`[App] Loading ${QUIZ_COUNT} quizzes...`);
-      const promises = Array.from({ length: QUIZ_COUNT }, () => quizApi.getRandomQuiz());
-      const quizzes = await Promise.all(promises);
-      console.log(`[App] All ${QUIZ_COUNT} quizzes loaded:`, quizzes.map((q) => q.id));
+    console.log(`[App] Loading ${QUIZ_COUNT} quizzes...`);
+    const { quizzes, isOffline } = await quizApi.getRandomQuizzes(QUIZ_COUNT);
+    console.log(`[App] All ${quizzes.length} quizzes loaded:`, quizzes.map((q) => q.id), isOffline ? '(오프라인 모드)' : '');
 
-      setQuizQueue(quizzes);
-      currentQuizIndex.current = 0;
-      setCurrentQuiz(quizzes[currentQuizIndex.current]);
-      setGameMode('playing');
-      setUserAnswer(null);
-      setAnswerResult(null);
-      setTimerKey((prev) => prev + 1);
+    setIsOfflineMode(isOffline);
+    setQuizQueue(quizzes);
+    currentQuizIndex.current = 0;
+    setCurrentQuiz(quizzes[currentQuizIndex.current]);
+    setGameMode('playing');
+    setUserAnswer(null);
+    setAnswerResult(null);
+    setTimerKey((prev) => prev + 1);
+    setLoading(false);
 
-      Analytics.impression({ event_name: 'game_started', quiz_count: QUIZ_COUNT });
-    } catch (err) {
-      console.error('[App] Start game error:', err);
-      const errorMessage =
-        err instanceof QuizApiError
-          ? `${err.message} (Status: ${err.status})`
-          : err instanceof Error
-            ? err.message
-            : '서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    Analytics.impression({
+      event_name: 'game_started',
+      quiz_count: quizzes.length,
+      is_offline_mode: isOffline,
+    });
   }, []);
 
   // 답변 선택 처리
@@ -263,6 +257,8 @@ export function useQuizGame(): UseQuizGameReturn {
     setQuizHistory([]);
     setAnswerResult(null);
     setError(null);
+    setIsOfflineMode(false);
+    setOfflineMode(false);
   }, [autoTransitionTimer]);
 
   return {
@@ -276,6 +272,7 @@ export function useQuizGame(): UseQuizGameReturn {
     error,
     showConfetti,
     timerKey,
+    isOfflineMode,
 
     // 계산된 값
     correctCount,
