@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface TimerProps {
   duration: number; // 지속 시간 (초)
@@ -9,6 +9,8 @@ interface TimerProps {
 
 export function Timer({ duration, onTimeout, isRunning, onReset }: TimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
+  const onTimeoutRef = useRef(onTimeout);
+  onTimeoutRef.current = onTimeout;
 
   useEffect(() => {
     setTimeLeft(duration);
@@ -18,7 +20,7 @@ export function Timer({ duration, onTimeout, isRunning, onReset }: TimerProps) {
     if (!isRunning) return;
 
     if (timeLeft <= 0) {
-      onTimeout();
+      onTimeoutRef.current();
       return;
     }
 
@@ -33,7 +35,7 @@ export function Timer({ duration, onTimeout, isRunning, onReset }: TimerProps) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timeLeft, isRunning, onTimeout]);
+  }, [timeLeft, isRunning]);
 
   const percentage = (timeLeft / duration) * 100;
   const isLow = percentage < 30;

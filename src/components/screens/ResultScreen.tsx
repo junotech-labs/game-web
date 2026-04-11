@@ -32,12 +32,6 @@ export function ResultScreen({
   onRetry,
 }: ResultScreenProps) {
   const handleBackToMenu = () => {
-    console.log('[ResultScreen] Back to menu button clicked', {
-      total_count: totalCount,
-      correct_count: correctCount,
-      accuracy,
-      rank_title: rankInfo.title,
-    });
     Analytics.click({
       button_name: 'back_to_menu',
       total_count: totalCount,
@@ -48,9 +42,6 @@ export function ResultScreen({
   };
 
   const handleRetry = () => {
-    console.log('[ResultScreen] Retry button clicked', {
-      previous_score: { total_count: totalCount, correct_count: correctCount, accuracy },
-    });
     Analytics.click({
       button_name: 'retry',
       previous_total: totalCount,

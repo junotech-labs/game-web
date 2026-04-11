@@ -33,12 +33,6 @@ export function PlayScreen({
   onShowResults,
 }: PlayScreenProps) {
   const handleAnswer = (index: number) => {
-    console.log('[PlayScreen] Answer selected:', {
-      quiz_id: currentQuiz.id,
-      answer_index: index,
-      selected_option: currentQuiz.options[index],
-      question_number: quizHistory.length + 1,
-    });
     Analytics.click({
       button_name: 'answer_select',
       quiz_id: currentQuiz.id,
@@ -49,10 +43,6 @@ export function PlayScreen({
   };
 
   const handleNextQuestion = () => {
-    console.log('[PlayScreen] Next question button clicked', {
-      current_question: quizHistory.length,
-      is_last_question: quizHistory.length >= QUIZ_COUNT,
-    });
     Analytics.click({
       button_name: 'next_question',
       current_question: quizHistory.length,
@@ -61,10 +51,6 @@ export function PlayScreen({
   };
 
   const handleShowResults = () => {
-    console.log('[PlayScreen] Show results button clicked', {
-      total_questions: quizHistory.length,
-      correct_answers: quizHistory.filter((h) => h.is_correct).length,
-    });
     Analytics.click({
       button_name: 'show_results',
       total_questions: quizHistory.length,
@@ -74,10 +60,6 @@ export function PlayScreen({
   };
 
   const handleTimeout = () => {
-    console.log('[PlayScreen] Timer timeout - auto selecting first answer', {
-      quiz_id: currentQuiz.id,
-      question_number: quizHistory.length + 1,
-    });
     Analytics.click({
       button_name: 'timer_timeout',
       quiz_id: currentQuiz.id,

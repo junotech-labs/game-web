@@ -21,7 +21,6 @@ interface UseQuizGameReturn {
   error: string | null;
   showConfetti: boolean;
   timerKey: number;
-  isOfflineMode: boolean;
 
   // 계산된 값
   correctCount: number;
@@ -62,8 +61,6 @@ export function useQuizGame(): UseQuizGameReturn {
 
   // 다음 문제로 이동
   const handleNextQuestion = useCallback(() => {
-    console.log('[App] Moving to next question...');
-
     if (autoTransitionTimer) {
       clearTimeout(autoTransitionTimer);
       setAutoTransitionTimer(null);
@@ -75,11 +72,9 @@ export function useQuizGame(): UseQuizGameReturn {
 
     const nextIndex = currentQuizIndex.current + 1;
     if (nextIndex < quizQueue.length) {
-      console.log('[App] Loading quiz from queue:', quizQueue[nextIndex].id);
       currentQuizIndex.current = nextIndex;
       setCurrentQuiz(quizQueue[nextIndex]);
     } else {
-      console.error('[App] No more quizzes in queue!');
       setError('퀴즈를 불러올 수 없습니다.');
     }
   }, [autoTransitionTimer, quizQueue]);
@@ -90,9 +85,7 @@ export function useQuizGame(): UseQuizGameReturn {
     setError(null);
     setQuizHistory([]);
 
-    console.log(`[App] Loading ${QUIZ_COUNT} quizzes...`);
     const { quizzes, isOffline } = await quizApi.getRandomQuizzes(QUIZ_COUNT);
-    console.log(`[App] All ${quizzes.length} quizzes loaded:`, quizzes.map((q) => q.id), isOffline ? '(오프라인 모드)' : '');
 
     setIsOfflineMode(isOffline);
     setQuizQueue(quizzes);
@@ -114,7 +107,6 @@ export function useQuizGame(): UseQuizGameReturn {
   // 답변 선택 처리
   const onAnswer = useCallback((answerIndex: number) => {
     if (userAnswer !== null) return;
-    console.log('[useQuizGame] User answer selected:', { answerIndex });
     setUserAnswer(answerIndex);
   }, [userAnswer]);
 
@@ -129,12 +121,10 @@ export function useQuizGame(): UseQuizGameReturn {
       setError(null);
 
       try {
-        console.log('[App] Submitting answer:', { quiz_id: currentQuiz.id, user_answer });
         const result = await quizApi.submitAnswer({
           quiz_id: currentQuiz.id,
           user_answer,
         });
-        console.log('[App] Answer result:', result);
 
         setAnswerResult(result);
         const newHistory = [...quizHistory, result];
@@ -144,12 +134,6 @@ export function useQuizGame(): UseQuizGameReturn {
         const isGameComplete = newHistory.length >= QUIZ_COUNT;
 
         if (result.is_correct) {
-          console.log('[useQuizGame] Correct answer!', {
-            quiz_id: currentQuiz.id,
-            question_number: newHistory.length,
-            total_correct: newHistory.filter((h) => h.is_correct).length,
-            is_game_complete: isGameComplete,
-          });
           Analytics.impression({
             event_name: 'answer_correct',
             quiz_id: currentQuiz.id,
@@ -161,18 +145,11 @@ export function useQuizGame(): UseQuizGameReturn {
           setTimeout(() => setShowConfetti(false), CONFETTI_DURATION);
 
           if (newHistory.length < QUIZ_COUNT) {
-            console.log('[useQuizGame] Auto-transitioning to next question after correct answer');
             const timer = setTimeout(() => {
               handleNextQuestion();
             }, CORRECT_ANSWER_DELAY);
             setAutoTransitionTimer(timer);
           } else {
-            console.log('[useQuizGame] Game completed!', {
-              final_score: {
-                correct: newHistory.filter((h) => h.is_correct).length,
-                total: newHistory.length,
-              },
-            });
             Analytics.impression({
               event_name: 'game_complete',
               final_correct: newHistory.filter((h) => h.is_correct).length,
@@ -181,12 +158,6 @@ export function useQuizGame(): UseQuizGameReturn {
             });
           }
         } else {
-          console.log('[useQuizGame] Wrong answer!', {
-            quiz_id: currentQuiz.id,
-            question_number: newHistory.length,
-            total_correct: newHistory.filter((h) => h.is_correct).length,
-            is_game_complete: isGameComplete,
-          });
           Analytics.impression({
             event_name: 'answer_wrong',
             quiz_id: currentQuiz.id,
@@ -195,18 +166,11 @@ export function useQuizGame(): UseQuizGameReturn {
           });
 
           if (newHistory.length < QUIZ_COUNT) {
-            console.log('[useQuizGame] Auto-transitioning to next question after wrong answer');
             const timer = setTimeout(() => {
               handleNextQuestion();
             }, WRONG_ANSWER_DELAY);
             setAutoTransitionTimer(timer);
           } else {
-            console.log('[useQuizGame] Game completed!', {
-              final_score: {
-                correct: newHistory.filter((h) => h.is_correct).length,
-                total: newHistory.length,
-              },
-            });
             Analytics.impression({
               event_name: 'game_complete',
               final_correct: newHistory.filter((h) => h.is_correct).length,
@@ -234,17 +198,11 @@ export function useQuizGame(): UseQuizGameReturn {
 
   // 결과 화면 표시
   const showResults = useCallback(() => {
-    console.log('[useQuizGame] Showing results screen', {
-      total_questions: quizHistory.length,
-      correct_count: quizHistory.filter((h) => h.is_correct).length,
-    });
     setGameMode('result');
   }, [quizHistory]);
 
   // 메인 메뉴로 돌아가기
   const backToMenu = useCallback(() => {
-    console.log('[useQuizGame] Returning to menu');
-
     if (autoTransitionTimer) {
       clearTimeout(autoTransitionTimer);
       setAutoTransitionTimer(null);
@@ -272,7 +230,6 @@ export function useQuizGame(): UseQuizGameReturn {
     error,
     showConfetti,
     timerKey,
-    isOfflineMode,
 
     // 계산된 값
     correctCount,
