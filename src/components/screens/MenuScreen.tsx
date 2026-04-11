@@ -1,16 +1,48 @@
 import { DiceIcon } from '../icons/DiceIcon';
-import { Analytics } from '@apps-in-toss/web-framework';
+import { Analytics, GoogleAdMob } from '@apps-in-toss/web-framework';
+import { PlayStatus } from '../../api/quizApi';
 
 interface MenuScreenProps {
   loading: boolean;
   error: string | null;
+  playStatus: PlayStatus | null;
+  canPlay: boolean;
   onStartGame: () => void;
+  onRewardPlay: (source: 'ad' | 'share' | 'invite') => Promise<void>;
 }
 
-export function MenuScreen({ loading, error, onStartGame }: MenuScreenProps) {
+export function MenuScreen({ loading, error, playStatus, canPlay, onStartGame, onRewardPlay }: MenuScreenProps) {
   const handleStartGame = () => {
     Analytics.click({ button_name: 'game_start' });
     onStartGame();
+  };
+
+  const handleWatchAd = async () => {
+    Analytics.click({ button_name: 'watch_ad_for_play' });
+    try {
+      if (GoogleAdMob?.loadAppsInTossAdMob?.isSupported?.() === true) {
+        await new Promise<void>((resolve, reject) => {
+          GoogleAdMob.loadAppsInTossAdMob({
+            options: { adGroupId: 'common-sense-hint-reward' },
+            onEvent: (event) => {
+              if (event.type === 'loaded') {
+                GoogleAdMob.showAppsInTossAdMob({
+                  options: { adGroupId: 'common-sense-hint-reward' },
+                  onEvent: (showEvent) => {
+                    if (showEvent.type === 'dismissed') resolve();
+                  },
+                  onError: () => reject(),
+                });
+              }
+            },
+            onError: () => reject(),
+          });
+        });
+      }
+    } catch {
+      // 광고 미지원 환경
+    }
+    await onRewardPlay('ad');
   };
 
   return (
@@ -39,11 +71,28 @@ export function MenuScreen({ loading, error, onStartGame }: MenuScreenProps) {
           <p className="text-gray-600 font-semibold">당신의 상식은 얼마나 되나요?</p>
         </div>
 
-        <div className="space-y-4">
+        {/* 플레이 횟수 표시 */}
+        {playStatus && (
+          <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4 border-2 border-emerald-200">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-gray-600">오늘 남은 기회</span>
+              <span className="text-2xl font-bold text-emerald-600">{playStatus.total_remaining}회</span>
+            </div>
+            <div className="flex gap-2 text-xs text-gray-500">
+              <span>무료 {playStatus.free_remaining}회</span>
+              {playStatus.bonus_remaining > 0 && (
+                <span className="text-orange-500 font-semibold">+ 보너스 {playStatus.bonus_remaining}회</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {/* 게임 시작 버튼 */}
           <button
             onClick={handleStartGame}
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white font-bold py-5 px-6 rounded-2xl hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 transition-all transform hover:scale-105 active:scale-95 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+            disabled={loading || !canPlay}
+            className="w-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white font-bold py-5 px-6 rounded-2xl hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 transition-all transform hover:scale-105 active:scale-95 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none relative overflow-hidden"
           >
             {loading ? (
               <span className="relative z-10 flex items-center justify-center gap-3">
@@ -53,19 +102,8 @@ export function MenuScreen({ loading, error, onStartGame }: MenuScreenProps) {
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 <span>문제 생성중...</span>
               </span>
@@ -74,11 +112,36 @@ export function MenuScreen({ loading, error, onStartGame }: MenuScreenProps) {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   <DiceIcon className="w-6 h-6" />
-                  랜덤 퀴즈 시작!
+                  {canPlay ? '랜덤 퀴즈 시작!' : '기회를 모두 사용했어요'}
                 </span>
               </>
             )}
           </button>
+
+          {/* 기회 얻기 섹션 — 플레이 불가 시 또는 항상 표시 */}
+          {playStatus && !canPlay && (
+            <div className="pt-3 border-t border-gray-200">
+              <p className="text-center text-sm font-semibold text-gray-500 mb-3">기회를 더 얻으세요!</p>
+              <div className="space-y-2">
+                <button
+                  onClick={handleWatchAd}
+                  className="w-full bg-yellow-400 text-yellow-900 font-bold py-3 px-4 rounded-xl hover:bg-yellow-500 transition-all active:scale-95"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    📺 광고 보고 +1회 얻기
+                  </span>
+                </button>
+                <button
+                  onClick={() => onRewardPlay('invite')}
+                  className="w-full bg-orange-400 text-white font-bold py-3 px-4 rounded-xl hover:bg-orange-500 transition-all active:scale-95"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    👋 친구 초대하고 +1회 얻기
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (

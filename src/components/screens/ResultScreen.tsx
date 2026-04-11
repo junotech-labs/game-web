@@ -6,7 +6,7 @@ import { RefreshIcon } from '../icons/RefreshIcon';
 import { ChartIcon } from '../icons/ChartIcon';
 import { CheckIcon } from '../icons/CheckIcon';
 import { XIcon } from '../icons/XIcon';
-import { Analytics } from '@apps-in-toss/web-framework';
+import { Analytics, getTossShareLink, share } from '@apps-in-toss/web-framework';
 
 interface ResultScreenProps {
   quizHistory: AnswerResponse[];
@@ -16,6 +16,7 @@ interface ResultScreenProps {
   rankInfo: RankInfo;
   showConfetti: boolean;
   loading: boolean;
+  canPlay: boolean;
   onBackToMenu: () => void;
   onRetry: () => void;
 }
@@ -28,6 +29,7 @@ export function ResultScreen({
   rankInfo,
   showConfetti,
   loading,
+  canPlay,
   onBackToMenu,
   onRetry,
 }: ResultScreenProps) {
@@ -49,6 +51,16 @@ export function ResultScreen({
       previous_accuracy: accuracy,
     });
     onRetry();
+  };
+
+  const handleShare = async () => {
+    Analytics.click({ button_name: 'share_result', accuracy, correct_count: correctCount });
+    try {
+      const link = await getTossShareLink('intoss://common-sense');
+      await share({ message: `🧠 상식 퀴즈에서 ${correctCount}/${totalCount} 맞췄어요! (${accuracy}%) 도전해보세요!\n${link}` });
+    } catch {
+      // 공유 실패 시 무시
+    }
   };
 
   return (
@@ -134,6 +146,18 @@ export function ResultScreen({
           </div>
         </div>
 
+        {/* Share Button */}
+        <div className="mb-4">
+          <button
+            onClick={handleShare}
+            className="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-2xl hover:bg-blue-600 transition-all active:scale-95"
+          >
+            <span className="flex items-center justify-center gap-2 text-sm">
+              📤 결과 공유하기
+            </span>
+          </button>
+        </div>
+
         {/* Action Buttons */}
         <div className="space-y-3">
           <button
@@ -147,8 +171,8 @@ export function ResultScreen({
           </button>
           <button
             onClick={handleRetry}
-            disabled={loading}
-            className="w-full bg-white border-2 border-gray-300 text-gray-700 font-bold py-4 px-6 rounded-2xl hover:border-emerald-400 hover:bg-emerald-50 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || !canPlay}
+            className="w-full bg-white border-2 border-gray-300 text-gray-700 font-bold py-4 px-6 rounded-2xl hover:border-emerald-400 hover:bg-emerald-50 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

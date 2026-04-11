@@ -46,16 +46,19 @@ function App() {
     correctCount,
     totalCount,
     accuracy,
+    playStatus,
+    canPlay,
     startGame,
     onAnswer,
     handleNextQuestion,
     showResults,
     backToMenu,
+    rewardPlay,
   } = useQuizGame();
 
   // 메인 메뉴 화면
   if (gameMode === 'menu') {
-    return <MenuScreen loading={loading} error={error} onStartGame={startGame} />;
+    return <MenuScreen loading={loading} error={error} playStatus={playStatus} canPlay={canPlay} onStartGame={startGame} onRewardPlay={rewardPlay} />;
   }
 
   // 결과 화면
@@ -71,6 +74,7 @@ function App() {
         rankInfo={rankInfo}
         showConfetti={showConfetti}
         loading={loading}
+        canPlay={canPlay}
         onBackToMenu={backToMenu}
         onRetry={startGame}
       />

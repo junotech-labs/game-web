@@ -1,12 +1,13 @@
-import { QuizResponse, AnswerResponse } from '../../types/quiz';
+import { useState } from 'react';
+import { FullQuizResponse, AnswerResponse } from '../../types/quiz';
 import { Confetti } from '../Confetti';
 import { Timer } from '../Timer';
 import { getCategoryColor } from '../../utils/quiz';
 import { QUIZ_COUNT, TIMER_DURATION, ANSWER_COLORS } from '../../constants/game';
-import { Analytics } from '@apps-in-toss/web-framework';
+import { Analytics, GoogleAdMob } from '@apps-in-toss/web-framework';
 
 interface PlayScreenProps {
-  currentQuiz: QuizResponse;
+  currentQuiz: FullQuizResponse;
   answerResult: AnswerResponse | null;
   userAnswer: number | null;
   quizHistory: AnswerResponse[];
@@ -134,13 +135,51 @@ export function PlayScreen({
 
 // 문제 표시 컴포넌트
 interface QuestionViewProps {
-  currentQuiz: QuizResponse;
+  currentQuiz: FullQuizResponse;
   userAnswer: number | null;
   loading: boolean;
   onAnswer: (index: number) => void;
 }
 
 function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionViewProps) {
+  const [hiddenOptions, setHiddenOptions] = useState<number[]>([]);
+  const [hintUsed, setHintUsed] = useState(false);
+
+  const handleHint = async () => {
+    Analytics.click({ button_name: 'hint_ad', quiz_id: currentQuiz.id });
+
+    // 보상형 광고 시도 (미지원 환경에서는 바로 힌트 제공)
+    try {
+      if (GoogleAdMob?.loadAppsInTossAdMob?.isSupported?.() === true) {
+        await new Promise<void>((resolve, reject) => {
+          GoogleAdMob.loadAppsInTossAdMob({
+            options: { adGroupId: 'common-sense-hint-reward' },
+            onEvent: (event) => {
+              if (event.type === 'loaded') {
+                GoogleAdMob.showAppsInTossAdMob({
+                  options: { adGroupId: 'common-sense-hint-reward' },
+                  onEvent: (showEvent) => {
+                    if (showEvent.type === 'dismissed') resolve();
+                  },
+                  onError: () => reject(),
+                });
+              }
+            },
+            onError: () => reject(),
+          });
+        });
+      }
+    } catch {
+      // 광고 실패 시에도 힌트 제공
+    }
+
+    // 힌트: 랜덤 2개 선택지 숨김
+    const allIdxs = [0, 1, 2, 3];
+    const shuffled = allIdxs.sort(() => Math.random() - 0.5);
+    setHiddenOptions(shuffled.slice(0, 2));
+    setHintUsed(true);
+  };
+
   return (
     <div>
       <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-8 border-2 border-emerald-200 shadow-inner min-h-[140px] flex items-center justify-center">
@@ -149,20 +188,35 @@ function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionVi
         </h2>
       </div>
 
+      {/* Hint Button */}
+      {!hintUsed && userAnswer === null && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={handleHint}
+            className="bg-yellow-400 text-yellow-900 font-bold py-2 px-5 rounded-full text-sm hover:bg-yellow-500 transition-all active:scale-95 shadow-md"
+          >
+            💡 힌트 (선택지 2개 제거)
+          </button>
+        </div>
+      )}
+
       {/* Answer Buttons */}
       <div className="grid grid-cols-2 gap-4 mt-8">
-        {currentQuiz.options.map((option, index) => (
-          <button
-            key={index}
-            onClick={() => onAnswer(index)}
-            disabled={userAnswer !== null || loading}
-            className={`${ANSWER_COLORS[index]} text-white font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer p-6 rounded-2xl relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-h-[120px]`}
-          >
-            <div className="relative z-10 flex items-center justify-center">
-              <span className="text-lg font-semibold">{option}</span>
-            </div>
-          </button>
-        ))}
+        {currentQuiz.options.map((option, index) => {
+          const isHidden = hiddenOptions.includes(index);
+          return (
+            <button
+              key={index}
+              onClick={() => onAnswer(index)}
+              disabled={userAnswer !== null || loading || isHidden}
+              className={`${ANSWER_COLORS[index]} text-white font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer p-6 rounded-2xl relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-h-[120px] ${isHidden ? 'opacity-20 pointer-events-none' : ''}`}
+            >
+              <div className="relative z-10 flex items-center justify-center">
+                <span className="text-lg font-semibold">{isHidden ? '—' : option}</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -170,7 +224,7 @@ function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionVi
 
 // 피드백 표시 컴포넌트
 interface FeedbackViewProps {
-  currentQuiz: QuizResponse;
+  currentQuiz: FullQuizResponse;
   answerResult: AnswerResponse;
   quizHistoryLength: number;
   loading: boolean;
