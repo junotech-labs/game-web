@@ -152,10 +152,13 @@ function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionVi
     // 보상형 광고 시도 (미지원 환경이나 실패 시에도 힌트 제공)
     await showRewardAd();
 
-    // 힌트: 랜덤 2개 선택지 숨김
-    const allIdxs = [0, 1, 2, 3];
-    const shuffled = allIdxs.sort(() => Math.random() - 0.5);
-    setHiddenOptions(shuffled.slice(0, 2));
+    // 힌트: 오답 중 랜덤 2개 선택지 숨김 (정답은 항상 남김)
+    const wrongIdxs = [0, 1, 2, 3].filter(i => i !== currentQuiz.correct_answer);
+    for (let i = wrongIdxs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [wrongIdxs[i], wrongIdxs[j]] = [wrongIdxs[j], wrongIdxs[i]];
+    }
+    setHiddenOptions(wrongIdxs.slice(0, 2));
     setHintUsed(true);
   };
 

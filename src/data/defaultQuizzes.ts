@@ -1,9 +1,6 @@
-import { QuizResponse, AnswerResponse } from '../types/quiz';
+import { FullQuizResponse, AnswerResponse } from '../types/quiz';
 
-export interface DefaultQuiz extends QuizResponse {
-  correct_answer: number;
-  explanation: string;
-}
+export type DefaultQuiz = FullQuizResponse;
 
 // API 호출 실패 시 사용할 기본 문제셋
 export const DEFAULT_QUIZZES: DefaultQuiz[] = [

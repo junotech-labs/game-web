@@ -84,8 +84,7 @@ export function useQuizGame(): UseQuizGameReturn {
   const [error, setError] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [timerKey, setTimerKey] = useState(0);
-  const [autoTransitionTimer, setAutoTransitionTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const autoTransitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 유저 식별키 초기화 + 플레이 횟수 로드 (앱 시작 시 1회)
   useEffect(() => {
@@ -102,12 +101,16 @@ export function useQuizGame(): UseQuizGameReturn {
   const totalCount = quizHistory.length;
   const accuracy = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
 
+  const clearAutoTransition = useCallback(() => {
+    if (autoTransitionTimer.current) {
+      clearTimeout(autoTransitionTimer.current);
+      autoTransitionTimer.current = null;
+    }
+  }, []);
+
   // 다음 문제로 이동
   const handleNextQuestion = useCallback(() => {
-    if (autoTransitionTimer) {
-      clearTimeout(autoTransitionTimer);
-      setAutoTransitionTimer(null);
-    }
+    clearAutoTransition();
 
     setError(null);
     setAnswerResult(null);
@@ -121,7 +124,7 @@ export function useQuizGame(): UseQuizGameReturn {
     } else {
       setError('퀴즈를 불러올 수 없습니다.');
     }
-  }, [autoTransitionTimer, quizQueue]);
+  }, [clearAutoTransition, quizQueue]);
 
   // 게임 시작
   const startGame = useCallback(async () => {
@@ -129,12 +132,11 @@ export function useQuizGame(): UseQuizGameReturn {
     if (userHash.current) {
       const result = await playsApi.consume(userHash.current);
       if (result && !result.success) {
-        setError('오늘 플레이 횟수를 모두 사용했어요! 광고 시청이나 친구 초대로 기회를 얻으세요.');
+        setError('오늘 플레이 횟수를 모두 사용했어요! 광고 시청으로 기회를 얻으세요.');
         return;
       }
-      if (result) {
-        setPlayStatus(result as unknown as PlayStatus);
-      }
+      // consume 성공 후 최신 플레이 상태 반영
+      await refreshPlayStatus();
     }
 
     setLoading(true);
@@ -143,7 +145,6 @@ export function useQuizGame(): UseQuizGameReturn {
 
     const { quizzes, isOffline } = await quizApi.getRandomQuizzes(QUIZ_COUNT);
 
-    setIsOfflineMode(isOffline);
     setQuizQueue(quizzes);
     currentQuizIndex.current = 0;
     setCurrentQuiz(quizzes[currentQuizIndex.current]);
@@ -166,7 +167,7 @@ export function useQuizGame(): UseQuizGameReturn {
       quiz_count: quizzes.length,
       is_offline_mode: isOffline,
     });
-  }, []);
+  }, [refreshPlayStatus]);
 
   // 답변 선택 처리
   const onAnswer = useCallback((answerIndex: number) => {
@@ -175,6 +176,8 @@ export function useQuizGame(): UseQuizGameReturn {
   }, [userAnswer]);
 
   // useEffect에서 사용자 응답 통합 처리
+  // deps를 [userAnswer]로 제한: handleAnswerSubmit 내부에서 최신 state를 closure로 캡처.
+  // quizHistory, currentQuiz 등을 deps에 넣으면 매 답변마다 effect가 재생성되어 무한 루프 위험.
   useEffect(() => {
     let cancelled = false;
 
@@ -228,10 +231,9 @@ export function useQuizGame(): UseQuizGameReturn {
         setTimeout(() => setShowConfetti(false), CONFETTI_DURATION);
 
         if (!isGameComplete) {
-          const timer = setTimeout(() => {
+          autoTransitionTimer.current = setTimeout(() => {
             handleNextQuestion();
           }, CORRECT_ANSWER_DELAY);
-          setAutoTransitionTimer(timer);
         }
       } else {
         Analytics.impression({
@@ -242,10 +244,9 @@ export function useQuizGame(): UseQuizGameReturn {
         });
 
         if (!isGameComplete) {
-          const timer = setTimeout(() => {
+          autoTransitionTimer.current = setTimeout(() => {
             handleNextQuestion();
           }, WRONG_ANSWER_DELAY);
-          setAutoTransitionTimer(timer);
         }
       }
 
@@ -282,14 +283,11 @@ export function useQuizGame(): UseQuizGameReturn {
   // 결과 화면 표시
   const showResults = useCallback(() => {
     setGameMode('result');
-  }, [quizHistory]);
+  }, []);
 
   // 메인 메뉴로 돌아가기
   const backToMenu = useCallback(() => {
-    if (autoTransitionTimer) {
-      clearTimeout(autoTransitionTimer);
-      setAutoTransitionTimer(null);
-    }
+    clearAutoTransition();
 
     setGameMode('menu');
     setCurrentQuiz(null);
@@ -298,11 +296,10 @@ export function useQuizGame(): UseQuizGameReturn {
     setQuizHistory([]);
     setAnswerResult(null);
     setError(null);
-    setIsOfflineMode(false);
     setOfflineMode(false);
     sessionId.current = null;
     refreshPlayStatus();
-  }, [autoTransitionTimer, refreshPlayStatus]);
+  }, [clearAutoTransition, refreshPlayStatus]);
 
   return {
     // 상태

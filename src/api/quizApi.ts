@@ -1,9 +1,7 @@
-import { QuizResponse, FullQuizResponse, AnswerRequest, AnswerResponse } from '../types/quiz';
+import { FullQuizResponse, AnswerRequest, AnswerResponse } from '../types/quiz';
 import {
-  getRandomDefaultQuiz,
   getRandomDefaultQuizzes,
   checkDefaultAnswer,
-  DefaultQuiz,
 } from '../data/defaultQuizzes';
 
 // API URL 끝의 슬래시 제거 (있는 경우)
@@ -11,17 +9,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? '';
 
 // 오프라인 모드 상태 관리
 let isOfflineMode = false;
-let offlineQuizzes: DefaultQuiz[] = [];
-
-export function getIsOfflineMode(): boolean {
-  return isOfflineMode;
-}
 
 export function setOfflineMode(offline: boolean): void {
   isOfflineMode = offline;
-  if (!offline) {
-    offlineQuizzes = [];
-  }
 }
 
 export class QuizApiError extends Error {
@@ -167,17 +157,16 @@ export const quizApi = {
       const promises = Array.from({ length: count }, () => this.getRandomQuizFull());
       const quizzes = await Promise.all(promises);
       isOfflineMode = false;
-      offlineQuizzes = [];
-      // 캐시에 저장
       quizCache = new Map();
       quizzes.forEach(q => quizCache.set(q.id, q));
       return { quizzes, isOffline: false };
     } catch {
       isOfflineMode = true;
-      offlineQuizzes = getRandomDefaultQuizzes(count);
+      // DefaultQuiz는 FullQuizResponse와 동일 구조 (QuizResponse + correct_answer + explanation)
+      const quizzes: FullQuizResponse[] = getRandomDefaultQuizzes(count);
       quizCache = new Map();
-      offlineQuizzes.forEach(q => quizCache.set(q.id, q as unknown as FullQuizResponse));
-      return { quizzes: offlineQuizzes as unknown as FullQuizResponse[], isOffline: true };
+      quizzes.forEach(q => quizCache.set(q.id, q));
+      return { quizzes, isOffline: true };
     }
   },
 
