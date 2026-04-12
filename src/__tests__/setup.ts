@@ -8,6 +8,7 @@ vi.mock('@apps-in-toss/web-framework', () => ({
     screen: vi.fn(),
     init: vi.fn(),
   },
+  getAnonymousKey: vi.fn().mockResolvedValue({ hash: 'test-user-hash', type: 'HASH' }),
   getUserKeyForGame: vi.fn().mockResolvedValue({ hash: 'test-user-hash', type: 'HASH' }),
   submitGameCenterLeaderBoardScore: vi.fn().mockResolvedValue({ statusCode: 'SUCCESS' }),
   getTossShareLink: vi.fn().mockResolvedValue('https://test-share-link'),

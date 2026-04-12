@@ -6,7 +6,9 @@ import { RefreshIcon } from '../icons/RefreshIcon';
 import { ChartIcon } from '../icons/ChartIcon';
 import { CheckIcon } from '../icons/CheckIcon';
 import { XIcon } from '../icons/XIcon';
-import { Analytics, getTossShareLink, share } from '@apps-in-toss/web-framework';
+import { useState } from 'react';
+import { Analytics } from '@apps-in-toss/web-framework';
+import { shareQuizResult } from '../../utils/tossRewards';
 
 interface ResultScreenProps {
   quizHistory: AnswerResponse[];
@@ -19,6 +21,7 @@ interface ResultScreenProps {
   canPlay: boolean;
   onBackToMenu: () => void;
   onRetry: () => void;
+  onRewardPlay: (source: 'ad' | 'share' | 'invite') => Promise<boolean>;
 }
 
 export function ResultScreen({
@@ -32,7 +35,11 @@ export function ResultScreen({
   canPlay,
   onBackToMenu,
   onRetry,
+  onRewardPlay,
 }: ResultScreenProps) {
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareRewardClaimed, setShareRewardClaimed] = useState(false);
+
   const handleBackToMenu = () => {
     Analytics.click({
       button_name: 'back_to_menu',
@@ -55,11 +62,21 @@ export function ResultScreen({
 
   const handleShare = async () => {
     Analytics.click({ button_name: 'share_result', accuracy, correct_count: correctCount });
+
+    setIsSharing(true);
+
     try {
-      const link = await getTossShareLink('intoss://common-sense');
-      await share({ message: `🧠 상식 퀴즈에서 ${correctCount}/${totalCount} 맞췄어요! (${accuracy}%) 도전해보세요!\n${link}` });
-    } catch {
-      // 공유 실패 시 무시
+      const shared = await shareQuizResult({ correctCount, totalCount, accuracy });
+      if (!shared || canPlay || shareRewardClaimed) {
+        return;
+      }
+
+      const rewarded = await onRewardPlay('share');
+      if (rewarded) {
+        setShareRewardClaimed(true);
+      }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -150,12 +167,18 @@ export function ResultScreen({
         <div className="mb-4">
           <button
             onClick={handleShare}
-            className="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-2xl hover:bg-blue-600 transition-all active:scale-95"
+            disabled={isSharing}
+            className="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-2xl hover:bg-blue-600 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="flex items-center justify-center gap-2 text-sm">
-              📤 결과 공유하기
+              {isSharing ? '공유 준비중...' : (!canPlay && !shareRewardClaimed ? '📤 결과 공유하고 +1회 얻기' : '📤 결과 공유하기')}
             </span>
           </button>
+          {!canPlay && shareRewardClaimed && (
+            <p className="mt-2 text-center text-xs font-semibold text-emerald-600">
+              공유 리워드가 지급됐어요. 바로 다시 도전할 수 있어요.
+            </p>
+          )}
         </div>
 
         {/* Action Buttons */}

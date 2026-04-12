@@ -4,7 +4,8 @@ import { Confetti } from '../Confetti';
 import { Timer } from '../Timer';
 import { getCategoryColor } from '../../utils/quiz';
 import { QUIZ_COUNT, TIMER_DURATION, ANSWER_COLORS } from '../../constants/game';
-import { Analytics, GoogleAdMob } from '@apps-in-toss/web-framework';
+import { Analytics } from '@apps-in-toss/web-framework';
+import { showRewardAd } from '../../utils/tossRewards';
 
 interface PlayScreenProps {
   currentQuiz: FullQuizResponse;
@@ -148,30 +149,8 @@ function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionVi
   const handleHint = async () => {
     Analytics.click({ button_name: 'hint_ad', quiz_id: currentQuiz.id });
 
-    // 보상형 광고 시도 (미지원 환경에서는 바로 힌트 제공)
-    try {
-      if (GoogleAdMob?.loadAppsInTossAdMob?.isSupported?.() === true) {
-        await new Promise<void>((resolve, reject) => {
-          GoogleAdMob.loadAppsInTossAdMob({
-            options: { adGroupId: 'common-sense-hint-reward' },
-            onEvent: (event) => {
-              if (event.type === 'loaded') {
-                GoogleAdMob.showAppsInTossAdMob({
-                  options: { adGroupId: 'common-sense-hint-reward' },
-                  onEvent: (showEvent) => {
-                    if (showEvent.type === 'dismissed') resolve();
-                  },
-                  onError: () => reject(),
-                });
-              }
-            },
-            onError: () => reject(),
-          });
-        });
-      }
-    } catch {
-      // 광고 실패 시에도 힌트 제공
-    }
+    // 보상형 광고 시도 (미지원 환경이나 실패 시에도 힌트 제공)
+    await showRewardAd();
 
     // 힌트: 랜덤 2개 선택지 숨김
     const allIdxs = [0, 1, 2, 3];

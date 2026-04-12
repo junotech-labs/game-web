@@ -10,7 +10,7 @@ import {
 } from '../constants/game';
 import {
   Analytics,
-  getUserKeyForGame,
+  getAnonymousKey,
   submitGameCenterLeaderBoardScore,
 } from '@apps-in-toss/web-framework';
 
@@ -41,7 +41,7 @@ interface UseQuizGameReturn {
   handleNextQuestion: () => void;
   showResults: () => void;
   backToMenu: () => void;
-  rewardPlay: (source: 'ad' | 'share' | 'invite') => Promise<void>;
+  rewardPlay: (source: 'ad' | 'share' | 'invite') => Promise<boolean>;
   refreshPlayStatus: () => Promise<void>;
 }
 
@@ -72,9 +72,11 @@ export function useQuizGame(): UseQuizGameReturn {
   }, []);
 
   const rewardPlay = useCallback(async (source: 'ad' | 'share' | 'invite') => {
-    if (!userHash.current) return;
+    if (!userHash.current) return false;
     const result = await playsApi.reward(userHash.current, source);
-    if (result) setPlayStatus(result);
+    if (!result) return false;
+    setPlayStatus(result);
+    return true;
   }, []);
 
   // UI 상태
@@ -87,8 +89,8 @@ export function useQuizGame(): UseQuizGameReturn {
 
   // 유저 식별키 초기화 + 플레이 횟수 로드 (앱 시작 시 1회)
   useEffect(() => {
-    getUserKeyForGame().then((result) => {
-      if (result && typeof result === 'object' && 'hash' in result) {
+    getAnonymousKey().then((result) => {
+      if (result && result !== 'ERROR' && typeof result === 'object' && 'hash' in result) {
         userHash.current = result.hash;
         refreshPlayStatus();
       }

@@ -1,6 +1,11 @@
 import { DiceIcon } from '../icons/DiceIcon';
-import { Analytics, GoogleAdMob } from '@apps-in-toss/web-framework';
+import { Analytics } from '@apps-in-toss/web-framework';
 import { PlayStatus } from '../../api/quizApi';
+import {
+  hasRewardAdConfigured,
+  isRewardAdSupported,
+  showRewardAd,
+} from '../../utils/tossRewards';
 
 interface MenuScreenProps {
   loading: boolean;
@@ -8,10 +13,14 @@ interface MenuScreenProps {
   playStatus: PlayStatus | null;
   canPlay: boolean;
   onStartGame: () => void;
-  onRewardPlay: (source: 'ad' | 'share' | 'invite') => Promise<void>;
+  onRewardPlay: (source: 'ad' | 'share' | 'invite') => Promise<boolean>;
 }
 
 export function MenuScreen({ loading, error, playStatus, canPlay, onStartGame, onRewardPlay }: MenuScreenProps) {
+  const rewardAdConfigured = hasRewardAdConfigured();
+  const rewardAdSupported = isRewardAdSupported();
+  const rewardAdEnabled = rewardAdConfigured && rewardAdSupported;
+
   const handleStartGame = () => {
     Analytics.click({ button_name: 'game_start' });
     onStartGame();
@@ -19,29 +28,12 @@ export function MenuScreen({ loading, error, playStatus, canPlay, onStartGame, o
 
   const handleWatchAd = async () => {
     Analytics.click({ button_name: 'watch_ad_for_play' });
-    try {
-      if (GoogleAdMob?.loadAppsInTossAdMob?.isSupported?.() === true) {
-        await new Promise<void>((resolve, reject) => {
-          GoogleAdMob.loadAppsInTossAdMob({
-            options: { adGroupId: 'common-sense-hint-reward' },
-            onEvent: (event) => {
-              if (event.type === 'loaded') {
-                GoogleAdMob.showAppsInTossAdMob({
-                  options: { adGroupId: 'common-sense-hint-reward' },
-                  onEvent: (showEvent) => {
-                    if (showEvent.type === 'dismissed') resolve();
-                  },
-                  onError: () => reject(),
-                });
-              }
-            },
-            onError: () => reject(),
-          });
-        });
-      }
-    } catch {
-      // 광고 미지원 환경
+
+    const rewarded = await showRewardAd();
+    if (!rewarded) {
+      return;
     }
+
     await onRewardPlay('ad');
   };
 
@@ -125,20 +117,18 @@ export function MenuScreen({ loading, error, playStatus, canPlay, onStartGame, o
               <div className="space-y-2">
                 <button
                   onClick={handleWatchAd}
-                  className="w-full bg-yellow-400 text-yellow-900 font-bold py-3 px-4 rounded-xl hover:bg-yellow-500 transition-all active:scale-95"
+                  disabled={!rewardAdEnabled}
+                  className="w-full bg-yellow-400 text-yellow-900 font-bold py-3 px-4 rounded-xl hover:bg-yellow-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="flex items-center justify-center gap-2">
-                    📺 광고 보고 +1회 얻기
+                    {rewardAdConfigured ? '📺 광고 보고 +1회 얻기' : '📺 광고 보상 준비중'}
                   </span>
                 </button>
-                <button
-                  onClick={() => onRewardPlay('invite')}
-                  className="w-full bg-orange-400 text-white font-bold py-3 px-4 rounded-xl hover:bg-orange-500 transition-all active:scale-95"
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    👋 친구 초대하고 +1회 얻기
-                  </span>
-                </button>
+                {!rewardAdSupported && (
+                  <p className="text-xs text-center text-gray-500">
+                    광고 보상은 토스 앱 안에서만 사용할 수 있어요.
+                  </p>
+                )}
               </div>
             </div>
           )}
