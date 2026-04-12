@@ -5,7 +5,6 @@ import { Timer } from '../Timer';
 import { getCategoryColor } from '../../utils/quiz';
 import { QUIZ_COUNT, TIMER_DURATION, ANSWER_COLORS } from '../../constants/game';
 import { Analytics } from '@apps-in-toss/web-framework';
-import { showRewardAd } from '../../utils/tossRewards';
 
 interface PlayScreenProps {
   currentQuiz: FullQuizResponse;
@@ -146,11 +145,8 @@ function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionVi
   const [hiddenOptions, setHiddenOptions] = useState<number[]>([]);
   const [hintUsed, setHintUsed] = useState(false);
 
-  const handleHint = async () => {
-    Analytics.click({ button_name: 'hint_ad', quiz_id: currentQuiz.id });
-
-    // 보상형 광고 시도 (미지원 환경이나 실패 시에도 힌트 제공)
-    await showRewardAd();
+  const handleHint = () => {
+    Analytics.click({ button_name: 'hint', quiz_id: currentQuiz.id });
 
     // 힌트: 오답 중 랜덤 2개 선택지 숨김 (정답은 항상 남김)
     const wrongIdxs = [0, 1, 2, 3].filter(i => i !== currentQuiz.correct_answer);
