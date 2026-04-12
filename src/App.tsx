@@ -77,7 +77,6 @@ function App() {
         canPlay={canPlay}
         onBackToMenu={backToMenu}
         onRetry={startGame}
-        onRewardPlay={rewardPlay}
       />
     );
   }

@@ -14,8 +14,6 @@ vi.mock('@apps-in-toss/web-framework', () => ({
   getTossShareLink: vi.fn().mockResolvedValue('https://test-share-link'),
   share: vi.fn().mockResolvedValue(undefined),
   contactsViral: vi.fn().mockReturnValue(() => {}),
-  GoogleAdMob: {
-    loadAppsInTossAdMob: Object.assign(vi.fn(), { isSupported: () => false }),
-    showAppsInTossAdMob: vi.fn(),
-  },
+  loadFullScreenAd: Object.assign(vi.fn(), { isSupported: () => false }),
+  showFullScreenAd: Object.assign(vi.fn(), { isSupported: () => false }),
 }));
