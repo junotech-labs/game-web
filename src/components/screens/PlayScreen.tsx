@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { FullQuizResponse, AnswerResponse } from '../../types/quiz';
 import { Confetti } from '../Confetti';
 import { Timer } from '../Timer';
@@ -142,22 +141,6 @@ interface QuestionViewProps {
 }
 
 function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionViewProps) {
-  const [hiddenOptions, setHiddenOptions] = useState<number[]>([]);
-  const [hintUsed, setHintUsed] = useState(false);
-
-  const handleHint = () => {
-    Analytics.click({ button_name: 'hint', quiz_id: currentQuiz.id });
-
-    // 힌트: 오답 중 랜덤 2개 선택지 숨김 (정답은 항상 남김)
-    const wrongIdxs = [0, 1, 2, 3].filter(i => i !== currentQuiz.correct_answer);
-    for (let i = wrongIdxs.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [wrongIdxs[i], wrongIdxs[j]] = [wrongIdxs[j], wrongIdxs[i]];
-    }
-    setHiddenOptions(wrongIdxs.slice(0, 2));
-    setHintUsed(true);
-  };
-
   return (
     <div>
       <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-8 border-2 border-emerald-200 shadow-inner min-h-[140px] flex items-center justify-center">
@@ -166,35 +149,20 @@ function QuestionView({ currentQuiz, userAnswer, loading, onAnswer }: QuestionVi
         </h2>
       </div>
 
-      {/* Hint Button */}
-      {!hintUsed && userAnswer === null && (
-        <div className="mt-4 flex justify-center">
-          <button
-            onClick={handleHint}
-            className="bg-yellow-400 text-yellow-900 font-bold py-2 px-5 rounded-full text-sm hover:bg-yellow-500 transition-all active:scale-95 shadow-md"
-          >
-            💡 힌트 (선택지 2개 제거)
-          </button>
-        </div>
-      )}
-
       {/* Answer Buttons */}
       <div className="grid grid-cols-2 gap-4 mt-8">
-        {currentQuiz.options.map((option, index) => {
-          const isHidden = hiddenOptions.includes(index);
-          return (
-            <button
-              key={index}
-              onClick={() => onAnswer(index)}
-              disabled={userAnswer !== null || loading || isHidden}
-              className={`${ANSWER_COLORS[index]} text-white font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer p-6 rounded-2xl relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-h-[120px] ${isHidden ? 'opacity-20 pointer-events-none' : ''}`}
-            >
-              <div className="relative z-10 flex items-center justify-center">
-                <span className="text-lg font-semibold">{isHidden ? '—' : option}</span>
-              </div>
-            </button>
-          );
-        })}
+        {currentQuiz.options.map((option, index) => (
+          <button
+            key={index}
+            onClick={() => onAnswer(index)}
+            disabled={userAnswer !== null || loading}
+            className={`${ANSWER_COLORS[index]} text-white font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer p-6 rounded-2xl relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-h-[120px]`}
+          >
+            <div className="relative z-10 flex items-center justify-center">
+              <span className="text-lg font-semibold">{option}</span>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );
