@@ -105,11 +105,11 @@ export function ResultScreen({
             <span>풀이 기록</span>
             <span className="text-xs text-gray-400">({totalCount}문제)</span>
           </h3>
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-5 gap-2">
             {quizHistory.map((result, index) => (
               <div
                 key={index}
-                className={`group relative rounded-xl p-4 transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
+                className={`group relative aspect-square rounded-xl flex items-center justify-center transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
                   result.is_correct
                     ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 hover:border-green-400'
                     : 'bg-gradient-to-br from-red-50 to-pink-50 border-2 border-red-300 hover:border-red-400'
@@ -117,29 +117,20 @@ export function ResultScreen({
               >
                 {/* Question Number Badge */}
                 <div
-                  className={`absolute -top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-md ${
+                  className={`absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-md ${
                     result.is_correct ? 'bg-green-500' : 'bg-red-500'
                   }`}
                 >
                   {index + 1}
                 </div>
 
-                {/* Icon and Status */}
-                <div className="flex flex-col items-center justify-center h-16">
-                  <div className={`mb-1 ${result.is_correct ? 'text-green-600' : 'text-red-600'}`}>
-                    {result.is_correct ? (
-                      <CheckIcon className="w-8 h-8" />
-                    ) : (
-                      <XIcon className="w-8 h-8" />
-                    )}
-                  </div>
-                  <span
-                    className={`text-xs font-semibold ${
-                      result.is_correct ? 'text-green-700' : 'text-red-700'
-                    }`}
-                  >
-                    {result.is_correct ? '정답' : '오답'}
-                  </span>
+                {/* Status Icon */}
+                <div className={result.is_correct ? 'text-green-600' : 'text-red-600'}>
+                  {result.is_correct ? (
+                    <CheckIcon className="w-7 h-7" />
+                  ) : (
+                    <XIcon className="w-7 h-7" />
+                  )}
                 </div>
               </div>
             ))}

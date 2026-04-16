@@ -65,7 +65,7 @@ export function PlayScreen({
       quiz_id: currentQuiz.id,
       question_number: quizHistory.length + 1,
     });
-    onAnswer(0);
+    onAnswer(-1);
   };
 
   return (

@@ -154,8 +154,22 @@ export const quizApi = {
   // 랜덤 퀴즈 여러 개 가져오기 (정답 포함, API 실패 시 기본 문제셋 사용)
   async getRandomQuizzes(count: number): Promise<{ quizzes: FullQuizResponse[]; isOffline: boolean }> {
     try {
-      const promises = Array.from({ length: count }, () => this.getRandomQuizFull());
-      const quizzes = await Promise.all(promises);
+      // 서버의 랜덤 엔드포인트는 중복을 반환할 수 있으므로 id 기준으로 dedupe 후 부족분 재요청
+      const uniqueById = new Map<number, FullQuizResponse>();
+      const MAX_ROUNDS = 5;
+      for (let round = 0; round < MAX_ROUNDS && uniqueById.size < count; round++) {
+        const need = count - uniqueById.size;
+        const batch = await Promise.all(
+          Array.from({ length: need }, () => this.getRandomQuizFull())
+        );
+        for (const q of batch) {
+          if (!uniqueById.has(q.id)) uniqueById.set(q.id, q);
+        }
+      }
+      if (uniqueById.size < count) {
+        throw new QuizApiError('Failed to fetch enough unique quizzes');
+      }
+      const quizzes = Array.from(uniqueById.values()).slice(0, count);
       isOfflineMode = false;
       quizCache = new Map();
       quizzes.forEach(q => quizCache.set(q.id, q));

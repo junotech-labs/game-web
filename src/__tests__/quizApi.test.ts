@@ -37,16 +37,41 @@ describe('quizApi', () => {
 
   describe('getRandomQuizzes', () => {
     it('성공 시 정답 포함 퀴즈 반환, 오프라인 모드 false', async () => {
-      const quiz = { id: 1, question: 'test', options: ['a', 'b', 'c', 'd'], category: '지리', correct_answer: 0, explanation: 'x' };
-      mockFetch.mockResolvedValue({
+      let nextId = 1;
+      mockFetch.mockImplementation(() => Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(quiz),
-      });
+        json: () => Promise.resolve({
+          id: nextId++,
+          question: 'test', options: ['a', 'b', 'c', 'd'], category: '지리', correct_answer: 0, explanation: 'x',
+        }),
+      }));
 
       const { quizzes, isOffline } = await quizApi.getRandomQuizzes(3);
       expect(quizzes).toHaveLength(3);
       expect(isOffline).toBe(false);
       expect(quizzes[0].correct_answer).toBeDefined();
+      // 모든 퀴즈 id가 유일해야 함
+      const ids = new Set(quizzes.map(q => q.id));
+      expect(ids.size).toBe(3);
+    });
+
+    it('서버가 중복 퀴즈를 반환해도 dedupe하여 유일한 퀴즈셋 반환', async () => {
+      // 처음 3번은 같은 id, 이후부터는 새 id를 반환하도록 설정
+      const sequence = [1, 1, 1, 2, 3];
+      let i = 0;
+      mockFetch.mockImplementation(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          id: sequence[Math.min(i++, sequence.length - 1)],
+          question: 'q', options: ['a', 'b', 'c', 'd'], category: 'c', correct_answer: 0, explanation: 'e',
+        }),
+      }));
+
+      const { quizzes, isOffline } = await quizApi.getRandomQuizzes(3);
+      expect(isOffline).toBe(false);
+      expect(quizzes).toHaveLength(3);
+      const ids = new Set(quizzes.map(q => q.id));
+      expect(ids.size).toBe(3);
     });
 
     it('API 실패 시 오프라인 모드로 전환 + 기본 퀴즈 반환', async () => {
