@@ -2,8 +2,8 @@
 
 ## 스택
 
-- React 18 + TypeScript + Vite + Tailwind CSS
-- SDK: `@apps-in-toss/web-framework` ^2.4.5
+- React 19 + TypeScript + Vite + Tailwind CSS
+- SDK: `@apps-in-toss/web-framework` ^2.5.1
 
 ## 명령어
 

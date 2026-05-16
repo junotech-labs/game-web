@@ -7,11 +7,8 @@ import {
 // API URL 끝의 슬래시 제거 (있는 경우)
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? '';
 
-// 오프라인 모드 상태 관리
-let isOfflineMode = false;
-
-export function setOfflineMode(offline: boolean): void {
-  isOfflineMode = offline;
+export function setOfflineMode(_offline: boolean): void {
+  // no-op: offline state is tracked per-call via return value, not module state
 }
 
 export class QuizApiError extends Error {
@@ -170,12 +167,10 @@ export const quizApi = {
         throw new QuizApiError('Failed to fetch enough unique quizzes');
       }
       const quizzes = Array.from(uniqueById.values()).slice(0, count);
-      isOfflineMode = false;
       quizCache = new Map();
       quizzes.forEach(q => quizCache.set(q.id, q));
       return { quizzes, isOffline: false };
     } catch {
-      isOfflineMode = true;
       // DefaultQuiz는 FullQuizResponse와 동일 구조 (QuizResponse + correct_answer + explanation)
       const quizzes: FullQuizResponse[] = getRandomDefaultQuizzes(count);
       quizCache = new Map();
